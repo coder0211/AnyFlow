@@ -8,6 +8,10 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`github-page` flow**: the easiest built-in to try — hand it a public GitHub
+  URL and it goes fetch (public REST API) → build (one self-contained HTML page)
+  → preview, with a gate that stops on a bad/private link. Runnable, real-fetch
+  demo: `python examples/github_page.py <github-url>`.
 - **Live progress**: every step response now carries a `progress` map (current
   step index, percent done, the ordered `path` taken with loops, completed and
   remaining steps, and per-step attempt counts). New `get_progress(session_id)`

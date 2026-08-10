@@ -76,7 +76,10 @@ Two layers, kept strictly separate:
   (`FlowRegistry`, `SessionManager`) every flow implements against. Zero
   dependency on `mcp`, so flows and their contract tests run without a server.
 - **`anyflow.flows`** — the _concrete implementations_ you clone, copy, and
-  extend. Three working templates ship in the box:
+  extend. Four working templates ship in the box:
+  - `github-page` — the **easiest to try**: hand it a public GitHub URL and it
+    goes fetch (public REST API) → build (one self-contained HTML page) → preview.
+    A bad or private link stops at the `fetch` gate. See [Try it](#try-it-in-30-seconds).
   - `ship-hotfix` — the flagship: a real **multi-tool release runbook** (triage →
     reproduce → patch → test → staging → verify → prod → monitor) with two gates
     — a failed staging check routes back to `patch`, a prod regression routes to
@@ -145,6 +148,29 @@ pip install -e ".[dev]"     # or: pip install -r requirements.txt
 pytest                       # run the engine + example-flow tests
 python -m anyflow.server     # start the MCP server over stdio
 ```
+
+### Try it in 30 seconds
+
+The `github-page` example is a real (tiny) agent driven by the flow: it fetches a
+public GitHub repo or user, builds one self-contained HTML page, and previews it —
+producing a file you can open.
+
+```bash
+python examples/github_page.py https://github.com/psf/requests
+# → build/psf-requests.html   (open it in your browser)
+```
+
+```text
+── Fetch the public GitHub data (fetch)   ✅ Fetched repo psf/requests.
+── Build the HTML page (build)            ✅ Wrote build/psf-requests.html.
+── Preview and verify (preview)           ✅ Open it in a browser.
+🎉 done → build/psf-requests.html
+```
+
+Give it a bad or private link and the `fetch` gate stops the flow instead of
+building an empty page. Then point your own agent at any-flow and just say
+_"make an HTML page from github.com/…"_ — the agent does the fetch/write; the flow
+supplies the procedure and the gate.
 
 ### Connect it to an agent
 

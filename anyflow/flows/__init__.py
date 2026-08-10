@@ -10,6 +10,7 @@ from __future__ import annotations
 from anyflow.core import FlowRegistry
 
 from .bugfix import FixBugFlow
+from .ghpage import GithubPageFlow
 from .refactor import RefactorPythonFlow
 from .release import ShipHotfixFlow
 
@@ -17,6 +18,7 @@ from .release import ShipHotfixFlow
 def load_builtin_flows(registry: FlowRegistry) -> FlowRegistry:
     """Register every built-in flow into `registry` and return it."""
     registry.register(ShipHotfixFlow())
+    registry.register(GithubPageFlow())
     registry.register(RefactorPythonFlow())
     registry.register(FixBugFlow())
     return registry
