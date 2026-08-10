@@ -25,3 +25,7 @@ class SessionStore(ABC):
     @abstractmethod
     def load(self, session_id: str) -> Session:
         """Return the session, or raise KeyError if it is unknown."""
+
+    @abstractmethod
+    def list_sessions(self) -> list[Session]:
+        """Return all stored sessions (order is up to the store)."""

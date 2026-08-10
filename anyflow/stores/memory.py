@@ -24,3 +24,7 @@ class InMemorySessionStore(SessionStore):
             return self._sessions[session_id]
         except KeyError:
             raise KeyError(f"unknown session {session_id!r}") from None
+
+    def list_sessions(self) -> list[Session]:
+        # Newest last is insertion order; reverse so recent sessions lead.
+        return list(reversed(self._sessions.values()))

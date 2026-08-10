@@ -22,6 +22,11 @@ class Step(ABC):
     title: str
     #: One-line description used in the flow overview.
     description: str = ""
+    #: Loop guard: the most times a session may *enter* this step (via linear
+    #: progression or a `route` back into it). None = unlimited. When a branch
+    #: would exceed this, the engine refuses to advance and tells the agent to
+    #: escalate instead of ping-ponging a gate forever.
+    max_attempts: int | None = None
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)

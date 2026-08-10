@@ -83,6 +83,39 @@ class StepResult:
 
 
 @dataclass(frozen=True, slots=True)
+class FlowProgress:
+    """A live map of where a session is — so the agent never loses the thread.
+
+    Cheap to build and small enough to embed in every tool response: it answers
+    "which step am I on, how far along, what have I finished, what's left, and
+    how many times have I looped through a gate?" without a second round-trip.
+    """
+
+    flow_id: str
+    session_id: str
+    status: str
+    current_step_id: str | None
+    current_index: int  # 1-based position of the current step in declared order (0 when done)
+    total_steps: int
+    percent: int  # completed steps / total, rounded
+    completed_steps: list[str] = field(default_factory=list)
+    remaining_steps: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)  # ordered visit trail, includes repeats
+    attempts: dict[str, int] = field(default_factory=dict)  # step_id -> times entered
+
+
+@dataclass(frozen=True, slots=True)
+class SessionSummary:
+    """One row in a session listing — enough to recognize and resume a session."""
+
+    session_id: str
+    flow_id: str
+    status: str
+    current_step_id: str | None
+    steps_completed: int
+
+
+@dataclass(frozen=True, slots=True)
 class Validation:
     """Result of checking a StepResult against a step's expectations."""
 

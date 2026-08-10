@@ -72,6 +72,10 @@ class Flow(ABC):
     def first_step_id(self) -> str:
         return self._steps[0].id
 
+    def step_ids(self) -> list[str]:
+        """Step ids in declared (default linear) order."""
+        return [s.id for s in self._steps]
+
     def get_step(self, step_id: str) -> Step:
         try:
             return self._by_id[step_id]

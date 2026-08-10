@@ -93,6 +93,7 @@ The `anyflow.server` module wires the registry into an MCP server.
 class Step(ABC):
     id: str
     title: str
+    max_attempts: int | None = None                                # loop guard; None = unlimited
     def guide(self, context: FlowContext) -> StepGuidance: ...      # required
     def validate(self, result, context) -> Validation: ...          # default: ok
     def route(self, result, context) -> str | None: ...             # default: linear
@@ -108,18 +109,33 @@ of running strictly linearly.
 
 ### MCP tools
 
-| Tool                                      | Purpose                                                            |
-| ----------------------------------------- | ------------------------------------------------------------------ |
-| `list_workflows()`                        | Discover flows and when to use each.                               |
-| `get_workflow_plan(id)`                   | Read a flow's overview before committing (progressive disclosure). |
-| `start_workflow(id)`                      | Begin a session → `session_id` + first step guidance.              |
-| `get_current_step(session_id)`            | Re-fetch the current step's guidance.                              |
-| `complete_step(session_id, step_id, ...)` | Report a result; validate & advance.                               |
-| `abort_workflow(session_id)`              | Abandon a session.                                                 |
+| Tool                                      | Purpose                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| `list_workflows()`                        | Discover flows and when to use each.                                |
+| `get_workflow_plan(id)`                   | Read a flow's overview before committing (progressive disclosure).  |
+| `start_workflow(id)`                      | Begin a session → `session_id` + first step guidance.               |
+| `get_current_step(session_id)`            | Re-fetch the current step's guidance.                               |
+| `complete_step(session_id, step_id, ...)` | Report a result; validate & advance.                                |
+| `get_progress(session_id)`                | A live map: step _N_ of _M_, % done, path taken, per-step attempts. |
+| `list_sessions(status=…)`                 | Enumerate stored sessions to resume one (needs a persistent store). |
+| `abort_workflow(session_id)`              | Abandon a session.                                                  |
 
 Sessions are **stateful**: the server tracks where each agent is in its flow.
 Storage sits behind a `SessionStore` interface (`InMemorySessionStore` by
 default) — swap in SQLite/Redis without touching the flow engine.
+
+Every step response also carries a compact **`progress`** block, so the agent
+always knows where it is without a second call:
+
+- **Never lose the thread** — `progress` reports the current step's index, the
+  ordered `path` taken (loops included), which steps are done, what's left, and
+  how many times each step has been entered.
+- **Gates can't loop forever** — a `Step` may set `max_attempts`. When a branch
+  would re-enter a step past its ceiling (e.g. `patch` keeps failing staging
+  verification), the engine refuses to advance and tells the agent to escalate
+  instead of ping-ponging a gate indefinitely.
+- **Resume later** — with a persistent store, `list_sessions()` finds a stranded
+  `session_id` so an interrupted run can be picked back up mid-flow.
 
 ## Quick start
 

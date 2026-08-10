@@ -16,7 +16,7 @@ from dataclasses import asdict
 
 from mcp.server.mcpserver import MCPServer
 
-from anyflow.core import SessionManager, SessionStore, StepResult, StepStatus
+from anyflow.core import SessionManager, SessionStatus, SessionStore, StepResult, StepStatus
 from anyflow.flows import build_registry
 from anyflow.stores import InMemorySessionStore, SqliteSessionStore
 
@@ -29,6 +29,11 @@ Typical loop:
   4. Do the work the step describes with your own tools.
   5. complete_step(session_id, ...) to report the result and get the next step.
 Repeat 4-5 until the flow reports it is complete.
+
+Every step response carries a "progress" map (step N of M, percent, path, and
+per-step attempt counts) so you always know where you are. If a gated step keeps
+routing you back and hits its retry limit, complete_step errors — escalate or
+abort_workflow rather than looping. Resume earlier work with list_sessions().
 """
 
 def _build_store() -> SessionStore:
@@ -91,6 +96,7 @@ def start_workflow(workflow_id: str) -> dict:
         "status": session.status.value,
         "plan": asdict(flow.plan()),
         "current_step": _guidance(flow.id, session.current_step_id, session.id),
+        "progress": asdict(sessions.progress(session)),
     }
 
 
@@ -102,7 +108,29 @@ def get_current_step(session_id: str) -> dict:
         "session_id": session.id,
         "status": session.status.value,
         "current_step": _guidance(session.flow_id, session.current_step_id, session.id),
+        "progress": asdict(sessions.progress(session)),
     }
+
+
+@mcp.tool()
+def get_progress(session_id: str) -> dict:
+    """Get a live map of the session: step N of M, percent, path, and attempts.
+
+    Use it to reorient at any time — it does not advance the flow.
+    """
+    return asdict(sessions.progress(sessions.get(session_id)))
+
+
+@mcp.tool()
+def list_sessions(status: str | None = None) -> list[dict]:
+    """List stored sessions (newest first) so you can resume one.
+
+    Optionally filter by status: "running", "completed", or "aborted". Take a
+    session_id from the result and call get_current_step to pick up where it
+    left off (requires a persistent store — see ANYFLOW_DB).
+    """
+    filt = SessionStatus(status) if status else None
+    return [asdict(s) for s in sessions.list_sessions(filt)]
 
 
 @mcp.tool()
@@ -132,6 +160,7 @@ def complete_step(
         "status": session.status.value,
         "next_step": _guidance(session.flow_id, session.current_step_id, session.id),
         "flow_complete": session.current_step_id is None,
+        "progress": asdict(sessions.progress(session)),
     }
 
 

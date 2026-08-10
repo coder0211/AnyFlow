@@ -77,6 +77,9 @@ class PatchStep(Step):
     id = "patch"
     title = "Write the minimal patch"
     description = "Create a hotfix branch and make the smallest safe change."
+    # Staging can route back here on failure; cap the loop so a hotfix that
+    # keeps failing verification escalates to a human instead of ping-ponging.
+    max_attempts = 3
 
     def guide(self, context: FlowContext) -> StepGuidance:
         retry = context.result_of("verify_staging")

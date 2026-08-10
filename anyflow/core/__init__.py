@@ -8,7 +8,9 @@ from .context import FlowContext
 from .flow import Flow
 from .models import (
     FlowPlan,
+    FlowProgress,
     SessionStatus,
+    SessionSummary,
     StepGuidance,
     StepResult,
     StepStatus,
@@ -24,11 +26,13 @@ __all__ = [
     "Flow",
     "FlowContext",
     "FlowPlan",
+    "FlowProgress",
     "FlowRegistry",
     "Session",
     "SessionManager",
     "SessionStatus",
     "SessionStore",
+    "SessionSummary",
     "Step",
     "StepGuidance",
     "StepResult",

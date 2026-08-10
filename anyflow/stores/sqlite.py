@@ -33,6 +33,8 @@ def _dump(session: Session) -> str:
         {
             "current_step_id": session.current_step_id,
             "variables": session.variables,
+            "path": session.path,
+            "attempts": session.attempts,
             "history": {
                 step_id: {
                     "step_id": r.step_id,
@@ -64,6 +66,8 @@ def _load(row: sqlite3.Row) -> Session:
         status=SessionStatus(row["status"]),
         history=history,
         variables=data["variables"],
+        path=data.get("path", []),
+        attempts=data.get("attempts", {}),
     )
 
 
@@ -93,6 +97,14 @@ class SqliteSessionStore(SessionStore):
         if row is None:
             raise KeyError(f"unknown session {session_id!r}")
         return _load(row)
+
+    def list_sessions(self) -> list[Session]:
+        # INSERT OR REPLACE re-inserts on every save, so rowid tracks last-touched
+        # — DESC puts the most recently active sessions first (handy for resume).
+        rows = self._conn.execute(
+            "SELECT id, flow_id, status, data FROM sessions ORDER BY rowid DESC"
+        ).fetchall()
+        return [_load(row) for row in rows]
 
     def close(self) -> None:
         self._conn.close()
