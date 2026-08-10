@@ -235,7 +235,7 @@ __marimo__/
 *.swo
 *~
 
-# SVG preview thumbnails (docs/demo.svg and docs/logo.svg are committed sources)
+# SVG preview thumbnails (docs/demo.svg and logo.svg are committed sources)
 *.svg.png
 
 .claude
