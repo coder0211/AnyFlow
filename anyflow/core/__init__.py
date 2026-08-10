@@ -9,6 +9,7 @@ from .flow import Flow
 from .models import (
     FlowPlan,
     FlowProgress,
+    JsonValue,
     SessionStatus,
     SessionSummary,
     StepGuidance,
@@ -28,6 +29,7 @@ __all__ = [
     "FlowPlan",
     "FlowProgress",
     "FlowRegistry",
+    "JsonValue",
     "Session",
     "SessionManager",
     "SessionStatus",

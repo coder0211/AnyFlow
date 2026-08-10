@@ -27,7 +27,9 @@ from anyflow.core import (
 class TriageStep(Step):
     id = "triage"
     title = "Triage the incident"
-    description = "Confirm severity and that a hotfix (not the normal release) is warranted."
+    description = (
+        "Confirm severity and that a hotfix (not the normal release) is warranted."
+    )
 
     def guide(self, context: FlowContext) -> StepGuidance:
         incident = context.variables.get("incident", "the reported incident")
@@ -43,12 +45,17 @@ class TriageStep(Step):
             inputs_required=["Incident report / alert", "Current production version"],
             suggested_tools=["incident tracker (Jira/PagerDuty)", "logs / dashboards"],
             output_contract="Severity, affected version, and a go/no-go decision with reasoning.",
-            validation=["Severity and affected version are stated.", "Go/no-go is explicit."],
+            validation=[
+                "Severity and affected version are stated.",
+                "Go/no-go is explicit.",
+            ],
         )
 
     def validate(self, result: StepResult, context: FlowContext) -> Validation:
         if not result.summary.strip():
-            return Validation.failed("Triage needs severity, version, and a go/no-go decision.")
+            return Validation.failed(
+                "Triage needs severity, version, and a go/no-go decision."
+            )
         return Validation.passed()
 
 
@@ -69,7 +76,9 @@ class ReproduceStep(Step):
             inputs_required=["Affected version from triage"],
             suggested_tools=["git checkout <tag>", "run the app / repro script"],
             output_contract="Repro steps and observed failure on the production version.",
-            validation=["The bug was reproduced on the production version specifically."],
+            validation=[
+                "The bug was reproduced on the production version specifically."
+            ],
         )
 
 
@@ -122,16 +131,46 @@ class TestStep(Step):
             instructions=(
                 "Run the full test suite on the hotfix branch. Add a regression "
                 "test that fails on the old code and passes with the patch — this "
-                "is what stops the same incident recurring. Report the suite result."
+                "is what stops the same incident recurring.\n\n"
+                "Report the counts as a structured ARTIFACT `results` (this step is "
+                "gated on the numbers, not on prose):\n"
+                '  results = {"passed": <int>, "failed": <int>}\n'
+                "and name the new regression test in your summary."
             ),
             inputs_required=["The applied patch"],
             suggested_tools=["pytest / test runner", "CI pipeline"],
-            output_contract="Suite result (green) and the name of the new regression test.",
+            output_contract=(
+                'Artifact results={"passed":int,"failed":int} (failed must be 0) '
+                "and the name of the new regression test in the summary."
+            ),
             validation=[
-                "The full suite passed.",
+                "artifacts.results.failed == 0 and artifacts.results.passed > 0.",
                 "A regression test covering this bug was added.",
             ],
         )
+
+    def validate(self, result: StepResult, context: FlowContext) -> Validation:
+        # Teeth via structured artifacts: assert on the actual counts, which a
+        # vague "tests pass" summary can't fake and a string gate can't check.
+        results = result.artifacts.get("results")
+        if not isinstance(results, dict):
+            return Validation.failed(
+                'Report a `results` artifact: {"passed": <int>, "failed": <int>}.'
+            )
+        passed, failed = results.get("passed"), results.get("failed")
+        if not isinstance(passed, int) or not isinstance(failed, int):
+            return Validation.failed(
+                "results.passed and results.failed must be integers."
+            )
+        if failed > 0:
+            return Validation.failed(
+                f"{failed} test(s) still failing — do not proceed."
+            )
+        if passed <= 0:
+            return Validation.failed(
+                "No tests ran — a hotfix needs its regression test to run."
+            )
+        return Validation.passed()
 
 
 class DeployStagingStep(Step):
@@ -174,7 +213,9 @@ class VerifyStagingStep(Step):
             inputs_required=["Staging deploy id"],
             suggested_tools=["repro script against staging", "smoke tests"],
             output_contract="Pass/fail of the repro on staging plus smoke-test notes.",
-            validation=["The original repro was re-run against staging and the result reported."],
+            validation=[
+                "The original repro was re-run against staging and the result reported."
+            ],
         )
 
     def route(self, result: StepResult, context: FlowContext) -> str | None:
@@ -222,7 +263,7 @@ class DeployProdStep(Step):
         missing = [
             field
             for field in ("prod_deploy_id", "rollback_command")
-            if not result.artifacts.get(field, "").strip()
+            if not str(result.artifacts.get(field, "")).strip()
         ]
         if missing:
             return Validation.failed(
@@ -253,7 +294,9 @@ class MonitorStep(Step):
             inputs_required=["Production deploy id", "Pre-deploy metric baseline"],
             suggested_tools=["dashboards (Grafana/Datadog)", "error tracker (Sentry)"],
             output_contract="Post-deploy metrics vs baseline and a stable/regressed verdict.",
-            validation=["Metrics were compared against a baseline over a stated window."],
+            validation=[
+                "Metrics were compared against a baseline over a stated window."
+            ],
             is_last=True,
         )
 

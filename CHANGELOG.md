@@ -8,6 +8,18 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Structured (JSON) artifacts**: `StepResult.artifacts` values may now be any
+  JSON type — numbers, bools, lists, nested objects — not just strings, so a step
+  can hand off structured data and a later `validate` can assert on it. The
+  `ship-hotfix` `test` step is now gated on `results={"passed":int,"failed":int}`
+  (rejects any failure or a zero-test run), and `deploy_prod` on the
+  `prod_deploy_id` / `rollback_command` artifacts — "gates with teeth" that check
+  facts instead of trusting a free-text summary. Nested artifacts persist through
+  the SQLite store intact.
+- **Graceful escalation**: `Step.on_exhausted` lets the loop guard route to a
+  terminal hand-off step (e.g. `escalate`) instead of raising when the retry
+  ceiling trips. `ship-hotfix` adds an `escalate` step so an un-fixable hotfix
+  pages a human rather than looping or dead-ending.
 - **`github-page` flow**: the easiest built-in to try — hand it a public GitHub
   URL and it goes fetch (public REST API) → build (one self-contained HTML page)
   → preview, with a gate that stops on a bad/private link. Runnable, real-fetch

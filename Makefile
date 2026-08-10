@@ -10,3 +10,6 @@ lint:
 	ruff check .
 
 check: lint test
+
+demo:
+	python examples/run_demo.py

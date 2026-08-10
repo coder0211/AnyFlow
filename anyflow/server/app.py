@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import asdict
+from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
@@ -139,14 +140,16 @@ def complete_step(
     step_id: str,
     status: str = "completed",
     summary: str = "",
-    artifacts: dict[str, str] | None = None,
+    artifacts: dict[str, Any] | None = None,
 ) -> dict:
     """Report a step's result and advance the session.
 
     `step_id` must be the session's current step. `status` is one of
-    "completed", "failed", "skipped". The step may validate `summary`/`artifacts`
-    and reject the report; fix the issues and call again. On success you get the
-    next step's guidance, or a completion marker when the flow is finished.
+    "completed", "failed", "skipped". `artifacts` is a structured (JSON) handoff
+    — values may be strings, numbers, bools, lists, or nested objects (e.g.
+    {"results": {"passed": 43, "failed": 0}}). The step may validate
+    `summary`/`artifacts` and reject the report; fix the issues and call again. On
+    success you get the next step's guidance, or a completion marker when done.
     """
     result = StepResult(
         step_id=step_id,

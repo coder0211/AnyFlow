@@ -8,7 +8,7 @@ produce (the prod deploy id and the rollback command, captured verbatim).
 from __future__ import annotations
 
 from anyflow.core import FlowContext, StepResult, StepStatus
-from anyflow.flows.release.steps import DeployProdStep
+from anyflow.flows.release.steps import DeployProdStep, TestStep
 
 
 def _result(**artifacts: str) -> StepResult:
@@ -49,4 +49,43 @@ def test_both_artifacts_present_passes() -> None:
         _result(prod_deploy_id="prod-4490", rollback_command="deploy rollback prod-4489"),
         _ctx(),
     )
+    assert v.ok
+
+
+# -- structured (JSON) artifacts: the `test` step gates on the numbers ---------
+
+
+def _test_result(results: object) -> StepResult:
+    return StepResult(
+        step_id="test",
+        status=StepStatus.COMPLETED,
+        summary="suite is green, added test_regression",
+        artifacts={"results": results},
+    )
+
+
+def test_missing_results_artifact_is_rejected() -> None:
+    v = TestStep().validate(StepResult(step_id="test", status=StepStatus.COMPLETED), _ctx())
+    assert not v.ok
+    assert any("results" in i for i in v.issues)
+
+
+def test_non_integer_counts_are_rejected() -> None:
+    v = TestStep().validate(_test_result({"passed": "lots", "failed": 0}), _ctx())
+    assert not v.ok
+
+
+def test_any_failing_test_is_rejected() -> None:
+    v = TestStep().validate(_test_result({"passed": 42, "failed": 1}), _ctx())
+    assert not v.ok
+    assert any("failing" in i for i in v.issues)
+
+
+def test_zero_tests_run_is_rejected() -> None:
+    v = TestStep().validate(_test_result({"passed": 0, "failed": 0}), _ctx())
+    assert not v.ok
+
+
+def test_green_suite_passes() -> None:
+    v = TestStep().validate(_test_result({"passed": 43, "failed": 0}), _ctx())
     assert v.ok

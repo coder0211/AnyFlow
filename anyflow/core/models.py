@@ -9,6 +9,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
+
+# Any JSON-serializable value an agent may attach to a step result. Kept as a
+# plain alias (not a PEP 695 `type` statement) so the package imports on 3.11.
+# In practice: str | int | float | bool | None | list | dict of the same.
+JsonValue = Any
 
 
 class StepStatus(StrEnum):
@@ -74,12 +80,18 @@ class StepGuidance:
 
 @dataclass(frozen=True, slots=True)
 class StepResult:
-    """What an agent reports back after attempting a step."""
+    """What an agent reports back after attempting a step.
+
+    `artifacts` is a structured (JSON-serializable) handoff channel — a value can
+    be a string, number, bool, list, or nested dict — so a step can report, say,
+    `{"results": {"passed": 43, "failed": 0}}` and a later `validate` can assert
+    on the *numbers* instead of sniffing free text.
+    """
 
     step_id: str
     status: StepStatus
     summary: str = ""
-    artifacts: dict[str, str] = field(default_factory=dict)
+    artifacts: dict[str, JsonValue] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)

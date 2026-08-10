@@ -15,13 +15,14 @@ from anyflow.server import mcp
 
 from helpers.agent_sim import run_agent
 
-# deploy_prod is gated on structured artifacts, so any run that reaches it must
-# supply them (a real agent would report the actual deploy id / rollback command).
-PROD_ARTIFACTS = {
+# Two ship-hotfix steps are gated on structured artifacts, so any run through
+# them must supply the data a real agent would report.
+ARTIFACTS = {
+    "test": {"results": {"passed": 43, "failed": 0}},
     "deploy_prod": {
         "prod_deploy_id": "prod-4490",
         "rollback_command": "deploy rollback prod-4489",
-    }
+    },
 }
 
 
@@ -36,7 +37,7 @@ def test_linear_flow_runs_to_completion() -> None:
 
 
 def test_hotfix_happy_path_reaches_prod_and_monitors() -> None:
-    t = asyncio.run(run_agent(mcp, "ship-hotfix", _always_ok, artifacts=PROD_ARTIFACTS))
+    t = asyncio.run(run_agent(mcp, "ship-hotfix", _always_ok, artifacts=ARTIFACTS))
     assert t.completed
     # Reached production and monitoring, and never touched the rollback path.
     assert t.visited[-2:] == ["deploy_prod", "monitor"]
@@ -50,7 +51,7 @@ def test_staging_failure_routes_back_to_patch_before_prod() -> None:
             return "failed", "still broken on staging"
         return "completed", f"did {step_id}"
 
-    t = asyncio.run(run_agent(mcp, "ship-hotfix", decide, artifacts=PROD_ARTIFACTS))
+    t = asyncio.run(run_agent(mcp, "ship-hotfix", decide, artifacts=ARTIFACTS))
     assert t.completed
     # The gate held: patch ran twice and prod only came after the 2nd verify.
     assert t.visited.count("patch") == 2
@@ -67,7 +68,7 @@ def test_prod_regression_routes_to_rollback() -> None:
             return "failed", "error rate spiked after rollout"
         return "completed", f"did {step_id}"
 
-    t = asyncio.run(run_agent(mcp, "ship-hotfix", decide, artifacts=PROD_ARTIFACTS))
+    t = asyncio.run(run_agent(mcp, "ship-hotfix", decide, artifacts=ARTIFACTS))
     assert t.completed
     assert t.visited[-1] == "rollback"
     assert t.visited.index("rollback") > t.visited.index("monitor")
@@ -81,7 +82,7 @@ def test_endless_staging_failure_escalates_instead_of_looping() -> None:
             return "failed", "still broken on staging"
         return "completed", f"did {step_id}"
 
-    t = asyncio.run(run_agent(mcp, "ship-hotfix", decide))
+    t = asyncio.run(run_agent(mcp, "ship-hotfix", decide, artifacts=ARTIFACTS))
     assert t.completed
     assert t.visited[-1] == "escalate"
     assert t.visited.count("patch") == 3  # max_attempts

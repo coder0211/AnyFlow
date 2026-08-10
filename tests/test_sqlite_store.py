@@ -32,6 +32,27 @@ def test_round_trip_preserves_state(tmp_path) -> None:
     store.close()
 
 
+def test_round_trip_preserves_structured_json_artifacts(tmp_path) -> None:
+    store = SqliteSessionStore(tmp_path / "s.db")
+    sessions = SessionManager(build_registry(), store=store)
+
+    session, _ = sessions.start("refactor-python")
+    nested = {"results": {"passed": 43, "failed": 0}, "files": ["a.py", "b.py"], "clean": True}
+    sessions.complete_step(
+        session.id,
+        StepResult(
+            step_id="analyze",
+            status=StepStatus.COMPLETED,
+            summary="findings",
+            artifacts=nested,
+        ),
+    )
+
+    # Nested dicts, lists, ints, and bools survive the JSON round-trip intact.
+    assert store.load(session.id).history["analyze"].artifacts == nested
+    store.close()
+
+
 def test_survives_reopen_and_second_process_view(tmp_path) -> None:
     db = tmp_path / "s.db"
     store_a = SqliteSessionStore(db)
