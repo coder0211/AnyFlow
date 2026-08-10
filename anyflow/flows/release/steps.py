@@ -80,6 +80,7 @@ class PatchStep(Step):
     # Staging can route back here on failure; cap the loop so a hotfix that
     # keeps failing verification escalates to a human instead of ping-ponging.
     max_attempts = 3
+    on_exhausted = "escalate"
 
     def guide(self, context: FlowContext) -> StepGuidance:
         retry = context.result_of("verify_staging")
@@ -196,16 +197,41 @@ class DeployProdStep(Step):
                 "Deploy the verified hotfix to production. Announce in the incident "
                 "channel before you start and when it completes. Prefer a gradual "
                 "rollout (canary / percentage) if the platform supports it, and "
-                "have the rollback command ready in your clipboard before you ship."
+                "have the rollback command ready before you ship.\n\n"
+                "Report these as ARTIFACTS (not just prose) — this step is gated on "
+                "them:\n"
+                "  • prod_deploy_id   — the id of the production deploy you started\n"
+                "  • rollback_command — the exact command to revert it, verbatim"
             ),
             inputs_required=["A passing staging verification"],
             suggested_tools=["CI/CD deploy", "incident/Slack channel", "feature flags"],
-            output_contract="Production deploy id, rollout strategy, and rollback command on hand.",
+            output_contract=(
+                "Artifacts prod_deploy_id and rollback_command, plus the rollout "
+                "strategy in the summary."
+            ),
             validation=[
-                "A production deploy id is recorded.",
-                "The rollback command is identified before rollout.",
+                "artifacts.prod_deploy_id is set.",
+                "artifacts.rollback_command is set (captured verbatim, before rollout).",
             ],
         )
+
+    def validate(self, result: StepResult, context: FlowContext) -> Validation:
+        # Teeth: a prod deploy is irreversible-ish and safety hinges on the
+        # rollback command existing *before* rollout — so gate on structured
+        # artifacts the agent must actually produce, not a free-text claim.
+        missing = [
+            field
+            for field in ("prod_deploy_id", "rollback_command")
+            if not result.artifacts.get(field, "").strip()
+        ]
+        if missing:
+            return Validation.failed(
+                "Cannot ship to prod without these artifacts: "
+                + ", ".join(missing)
+                + ". A summary saying 'rollback is ready' is not enough — capture "
+                "the command verbatim so it's usable the instant prod regresses."
+            )
+        return Validation.passed()
 
 
 class MonitorStep(Step):
@@ -256,6 +282,37 @@ class RollbackStep(Step):
             suggested_tools=["deploy CLI rollback", "dashboards", "incident channel"],
             output_contract="Confirmation prod is on the known-good version and metrics recovered.",
             validation=["Production is confirmed restored to a known-good state."],
+            is_last=True,
+        )
+
+    def route(self, result: StepResult, context: FlowContext) -> str | None:
+        return Flow.END
+
+
+class EscalateStep(Step):
+    id = "escalate"
+    title = "Escalate to a human"
+    description = "The patch loop exhausted its retries — hand off, don't keep looping."
+
+    def guide(self, context: FlowContext) -> StepGuidance:
+        last = context.result_of("verify_staging")
+        last_note = f"\nLast staging failure:\n{last.summary}" if last else ""
+        return StepGuidance(
+            step_id=self.id,
+            title=self.title,
+            instructions=(
+                "Automated patching kept failing staging verification and hit its "
+                "retry limit — stop editing and escalate. Page the on-call owner "
+                "for this service, post a summary in the incident channel (what was "
+                "tried, why staging kept failing), and decide with a human whether "
+                "to keep the incident open, widen the investigation, or accept a "
+                "workaround."
+                f"{last_note}"
+            ),
+            inputs_required=["The history of failed patch attempts"],
+            suggested_tools=["incident channel", "pager / on-call rotation"],
+            output_contract="Confirmation a human owner has picked up the incident.",
+            validation=["A specific human/owner was paged and acknowledged."],
             is_last=True,
         )
 

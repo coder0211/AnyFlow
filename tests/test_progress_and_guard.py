@@ -134,6 +134,54 @@ def test_release_patch_has_a_ceiling() -> None:
     # The shipped runbook caps its re-patch loop so it can't ping-pong forever.
     flow = build_registry().get("ship-hotfix")
     assert flow.get_step("patch").max_attempts == 3
+    # ...and hands off gracefully instead of raising when it does.
+    assert flow.get_step("patch").on_exhausted == "escalate"
+
+
+class _PingEscalate(Step):
+    id = "ping"
+    title = "Ping"
+    max_attempts = 2
+    on_exhausted = "bail"  # route here instead of raising when the ceiling trips
+
+    def guide(self, context: FlowContext) -> StepGuidance:
+        return StepGuidance(step_id=self.id, title=self.title, instructions="ping")
+
+
+class _Bail(Step):
+    id = "bail"
+    title = "Bail"
+
+    def guide(self, context: FlowContext) -> StepGuidance:
+        return StepGuidance(step_id=self.id, title=self.title, instructions="bail")
+
+    def route(self, result: StepResult, context: FlowContext) -> str | None:
+        return Flow.END
+
+
+class _EscalateFlow(Flow):
+    id = "escalate-test"
+    name = "Escalate test"
+    goal = "exercise on_exhausted graceful routing"
+    steps = [_PingEscalate, _Pong, _Bail]
+
+
+def test_on_exhausted_routes_to_escalation_instead_of_raising() -> None:
+    registry = FlowRegistry()
+    registry.register(_EscalateFlow())
+    sessions = SessionManager(registry, InMemorySessionStore())
+    session, _ = sessions.start("escalate-test")  # ping (attempt 1)
+
+    _complete(sessions, session.id, "ping")  # -> pong
+    _complete(sessions, session.id, "pong")  # routes back to ping (attempt 2)
+    _complete(sessions, session.id, "ping")  # -> pong
+
+    # pong routes to ping a 3rd time (over the ceiling) -> hands off to `bail`,
+    # no exception, session stays healthy.
+    advanced = _complete(sessions, session.id, "pong")
+    assert advanced.current_step_id == "bail"
+    assert advanced.status is SessionStatus.RUNNING
+    assert sessions.progress(advanced).path[-1] == "bail"
 
 
 # -- listing / resume ------------------------------------------------------

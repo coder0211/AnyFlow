@@ -27,6 +27,11 @@ class Step(ABC):
     #: would exceed this, the engine refuses to advance and tells the agent to
     #: escalate instead of ping-ponging a gate forever.
     max_attempts: int | None = None
+    #: Where the loop guard routes when this step would be entered past
+    #: `max_attempts`. Set it to a terminal step id (e.g. "escalate") to hand off
+    #: gracefully instead of raising — turns "give up loudly" into "escalate to a
+    #: human". None keeps the safe default: refuse to advance and raise.
+    on_exhausted: str | None = None
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)

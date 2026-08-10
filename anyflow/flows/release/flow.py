@@ -7,6 +7,7 @@ from anyflow.core import Flow
 from .steps import (
     DeployProdStep,
     DeployStagingStep,
+    EscalateStep,
     MonitorStep,
     PatchStep,
     ReproduceStep,
@@ -38,6 +39,7 @@ class ShipHotfixFlow(Flow):
         DeployProdStep,
         MonitorStep,
         RollbackStep,
+        EscalateStep,
     ]
     prerequisites = [
         "You have deploy access to staging and production.",

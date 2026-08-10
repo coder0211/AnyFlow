@@ -55,9 +55,15 @@ async def run_agent(
     decide: Decider,
     *,
     variables: dict[str, str] | None = None,
+    artifacts: dict[str, dict[str, str]] | None = None,
     max_steps: int = 50,
 ) -> Transcript:
-    """Drive `workflow_id` to completion using `decide` for each step's result."""
+    """Drive `workflow_id` to completion using `decide` for each step's result.
+
+    `artifacts` optionally supplies structured artifacts per step id — needed for
+    steps whose validation gates on them (e.g. deploy_prod).
+    """
+    artifacts = artifacts or {}
     t = Transcript()
 
     async def call(name: str, args: dict) -> dict:
@@ -92,7 +98,13 @@ async def run_agent(
 
         advanced = await call(
             "complete_step",
-            {"session_id": session_id, "step_id": step_id, "status": status, "summary": summary},
+            {
+                "session_id": session_id,
+                "step_id": step_id,
+                "status": status,
+                "summary": summary,
+                "artifacts": artifacts.get(step_id, {}),
+            },
         )
         current = advanced["next_step"]
         if advanced["flow_complete"]:

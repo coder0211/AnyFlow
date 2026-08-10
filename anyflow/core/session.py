@@ -107,13 +107,18 @@ class SessionManager:
             # ping-ponging a gate forever. The failed result is already recorded;
             # the session stays parked on the current step so the agent can
             # escalate or abort with full history intact.
-            limit = flow.get_step(nxt).max_attempts
+            target = flow.get_step(nxt)
+            limit = target.max_attempts
             if limit is not None and session.attempts.get(nxt, 0) >= limit:
-                self._store.save(session)
-                raise ValueError(
-                    f"step {nxt!r} hit its retry limit ({limit}); the flow is "
-                    "looping. Escalate to a human or abort_workflow."
-                )
+                if target.on_exhausted is None:
+                    self._store.save(session)
+                    raise ValueError(
+                        f"step {nxt!r} hit its retry limit ({limit}); "
+                        "the flow is looping. Escalate to a human or abort_workflow."
+                    )
+                # Graceful hand-off: route to the declared escalation step instead.
+                nxt = target.on_exhausted
+                flow.get_step(nxt)  # fail fast if the escalation target is a typo
             _enter(session, nxt)
         session.current_step_id = nxt
         if nxt is None:
