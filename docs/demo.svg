@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="468" viewBox="0 0 1000 468" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+  <rect width="1000" height="468" rx="10" fill="#0d1117"/>
+  <rect width="1000" height="36" rx="10" fill="#161b22"/>
+  <rect y="26" width="1000" height="10" fill="#161b22"/>
+  <circle cx="20" cy="18" r="6" fill="#ff5f56"/>
+  <circle cx="40" cy="18" r="6" fill="#ffbd2e"/>
+  <circle cx="60" cy="18" r="6" fill="#27c93f"/>
+  <text x="500.0" y="23" fill="#6e7681" text-anchor="middle" font-size="12">any-flow · agent runs the ship-hotfix runbook</text>
+  <clipPath id="view"><rect x="0" y="32" width="1000" height="400"/></clipPath>
+  <g clip-path="url(#view)">
+    <g transform="translate(20,52)">
+      <animateTransform attributeName="transform" type="translate" additive="sum"
+        values="0 0;0 0;0 -620;0 -620" keyTimes="0;0.06;0.9;1" dur="35.699999999999996s" repeatCount="indefinite"/>
+      <text x="0" y="20" fill="#58a6ff" xml:space="preserve">» agent: picked workflow 'ship-hotfix' — Ship a hotfix to production</text>
+      <text x="0" y="40" fill="#58a6ff" xml:space="preserve">» plan: 9 steps · goal: Get a verified, minimal fix into production safely — with staging gate...</text>
+      <text x="0" y="60" fill="#58a6ff" xml:space="preserve">» started session 0ddff8c6…</text>
+      <text x="0" y="80" fill="#f0f6fc" xml:space="preserve">
+── step: Triage the incident  (triage)</text>
+      <text x="0" y="100" fill="#6e7681" xml:space="preserve">   guide: Assess the reported incident: user impact, blast radius, and whether it is urgent enough</text>
+      <text x="0" y="120" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: SEV2, prod v2.3.1, checkout page 500s. Go: hotfix warranted.</text>
+      <text x="0" y="140" fill="#58a6ff" xml:space="preserve">   → next: reproduce</text>
+      <text x="0" y="160" fill="#f0f6fc" xml:space="preserve">
+── step: Reproduce on the released version  (reproduce)</text>
+      <text x="0" y="180" fill="#6e7681" xml:space="preserve">   guide: Check out the production tag/version and reproduce the failure there — not on main. Capt</text>
+      <text x="0" y="200" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: Reproduced on tag v2.3.1: null cart -&gt; 500 at checkout.</text>
+      <text x="0" y="220" fill="#d29922" xml:space="preserve">   → next: patch</text>
+      <text x="0" y="240" fill="#f0f6fc" xml:space="preserve">
+── step: Write the minimal patch  (patch)</text>
+      <text x="0" y="260" fill="#6e7681" xml:space="preserve">   guide: Branch from the production tag (e.g. `git checkout -b hotfix/&lt;id&gt; &lt;tag&gt;`). Make the smal</text>
+      <text x="0" y="280" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: hotfix/checkout-null-cart off v2.3.1: guard empty cart.</text>
+      <text x="0" y="300" fill="#58a6ff" xml:space="preserve">   → next: test</text>
+      <text x="0" y="320" fill="#f0f6fc" xml:space="preserve">
+── step: Test and add a regression guard  (test)</text>
+      <text x="0" y="340" fill="#6e7681" xml:space="preserve">   guide: Run the full test suite on the hotfix branch. Add a regression test that fails on the ol</text>
+      <text x="0" y="360" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: Suite green. Added test_checkout_empty_and_deleted_cart.</text>
+      <text x="0" y="380" fill="#58a6ff" xml:space="preserve">   → next: deploy_staging</text>
+      <text x="0" y="400" fill="#f0f6fc" xml:space="preserve">
+── step: Deploy to staging  (deploy_staging)</text>
+      <text x="0" y="420" fill="#6e7681" xml:space="preserve">   guide: Deploy the hotfix branch to staging via the normal pipeline (not a manual copy). Record </text>
+      <text x="0" y="440" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: Deployed build #4471 to staging.</text>
+      <text x="0" y="460" fill="#58a6ff" xml:space="preserve">   → next: verify_staging</text>
+      <text x="0" y="480" fill="#f0f6fc" xml:space="preserve">
+── step: Verify on staging  (verify_staging)</text>
+      <text x="0" y="500" fill="#6e7681" xml:space="preserve">   guide: Re-run the original reproduction against staging and run a quick smoke test of the surro</text>
+      <text x="0" y="520" fill="#d29922" xml:space="preserve">   [!!] agent -&gt; failed: Repro fixed, but smoke test: deleted-SKU cart still 500s.</text>
+      <text x="0" y="540" fill="#d29922" xml:space="preserve">   → next: patch</text>
+      <text x="0" y="560" fill="#f0f6fc" xml:space="preserve">
+── step: Write the minimal patch  (patch)</text>
+      <text x="0" y="580" fill="#6e7681" xml:space="preserve">   guide: RETRY: staging verification failed last time —</text>
+      <text x="0" y="600" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: Re-patched: also handle cart with deleted SKU (missed before).</text>
+      <text x="0" y="620" fill="#58a6ff" xml:space="preserve">   → next: test</text>
+      <text x="0" y="640" fill="#f0f6fc" xml:space="preserve">
+── step: Test and add a regression guard  (test)</text>
+      <text x="0" y="660" fill="#6e7681" xml:space="preserve">   guide: Run the full test suite on the hotfix branch. Add a regression test that fails on the ol</text>
+      <text x="0" y="680" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: Suite green. Added test_checkout_empty_and_deleted_cart.</text>
+      <text x="0" y="700" fill="#58a6ff" xml:space="preserve">   → next: deploy_staging</text>
+      <text x="0" y="720" fill="#f0f6fc" xml:space="preserve">
+── step: Deploy to staging  (deploy_staging)</text>
+      <text x="0" y="740" fill="#6e7681" xml:space="preserve">   guide: Deploy the hotfix branch to staging via the normal pipeline (not a manual copy). Record </text>
+      <text x="0" y="760" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: Deployed build #4471 to staging.</text>
+      <text x="0" y="780" fill="#58a6ff" xml:space="preserve">   → next: verify_staging</text>
+      <text x="0" y="800" fill="#f0f6fc" xml:space="preserve">
+── step: Verify on staging  (verify_staging)</text>
+      <text x="0" y="820" fill="#6e7681" xml:space="preserve">   guide: Re-run the original reproduction against staging and run a quick smoke test of the surro</text>
+      <text x="0" y="840" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: Repro fixed AND smoke tests pass on staging build #4488.</text>
+      <text x="0" y="860" fill="#58a6ff" xml:space="preserve">   → next: deploy_prod</text>
+      <text x="0" y="880" fill="#f0f6fc" xml:space="preserve">
+── step: Deploy to production  (deploy_prod)</text>
+      <text x="0" y="900" fill="#6e7681" xml:space="preserve">   guide: Deploy the verified hotfix to production. Announce in the incident channel before you st</text>
+      <text x="0" y="920" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: Prod deploy #4490, 10% canary. Rollback ready.</text>
+      <text x="0" y="940" fill="#58a6ff" xml:space="preserve">   → next: monitor</text>
+      <text x="0" y="960" fill="#f0f6fc" xml:space="preserve">
+── step: Monitor production  (monitor)</text>
+      <text x="0" y="980" fill="#6e7681" xml:space="preserve">   guide: Watch error rate, latency, and the incident's key metric for at least 10-15 minutes (lon</text>
+      <text x="0" y="1000" fill="#3fb950" xml:space="preserve">   [ok] agent -&gt; completed: 15 min: error rate back to 0.02% baseline, latency flat. Stable.</text>
+      <text x="0" y="1020" fill="#3fb950" xml:space="preserve">
+*** flow complete.</text>
+    </g>
+  </g>
+</svg>

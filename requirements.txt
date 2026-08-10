@@ -1,0 +1,2 @@
+# Runtime deps. For development use `pip install -e ".[dev]"` (see pyproject.toml).
+mcp>=2.0.0

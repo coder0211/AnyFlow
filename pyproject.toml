@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "any-flow"
+version = "0.1.0"
+description = "MCP-served workflows that guide an AI agent step by step."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "Eric Nguyen", email = "nguyenduchoa.data@gmail.com" }]
+keywords = ["mcp", "ai", "agent", "workflow", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+    "mcp>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/coder0211/any-flow"
+Repository = "https://github.com/coder0211/any-flow"
+Issues = "https://github.com/coder0211/any-flow/issues"
+
+[project.scripts]
+any-flow = "anyflow.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["anyflow"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "tests"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["anyflow", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Interface methods keep their full signature even when a hook doesn't use every
+# argument (e.g. `context` in a step's `guide`); that's a contract, not dead code.
+ignore = ["ARG002"]
