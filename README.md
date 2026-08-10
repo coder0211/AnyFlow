@@ -151,6 +151,21 @@ Claude Desktop (`claude_desktop_config.json`):
 }
 ```
 
+Cursor (`~/.cursor/mcp.json` for all projects, or `.cursor/mcp.json` in a project):
+
+```json
+{
+  "mcpServers": {
+    "any-flow": {
+      "command": "python",
+      "args": ["-m", "anyflow.server"]
+    }
+  }
+}
+```
+
+Then enable **any-flow** under Cursor Settings → MCP.
+
 ## Persistence
 
 Sessions are in-memory by default (fine for a single-process stdio server). For
