@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from anyflow.core import SessionManager, SessionStatus, StepResult, StepStatus
+from anyflow.core import Session, SessionManager, SessionStatus, StepResult, StepStatus
 from anyflow.flows import build_registry
 from anyflow.stores import SqliteSessionStore
 
@@ -50,6 +50,22 @@ def test_round_trip_preserves_structured_json_artifacts(tmp_path) -> None:
 
     # Nested dicts, lists, ints, and bools survive the JSON round-trip intact.
     assert store.load(session.id).history["analyze"].artifacts == nested
+    store.close()
+
+
+def test_round_trip_preserves_structured_variables(tmp_path) -> None:
+    # `variables` is JSON like `artifacts` — structured values persist too.
+    store = SqliteSessionStore(tmp_path / "s.db")
+    variables = {"budget": {"max_files": 3}, "tags": ["a", "b"], "strict": True}
+    store.save(
+        Session(
+            id="x",
+            flow_id="refactor-python",
+            current_step_id="analyze",
+            variables=variables,
+        )
+    )
+    assert store.load("x").variables == variables
     store.close()
 
 

@@ -12,7 +12,7 @@
       <animateTransform attributeName="transform" type="translate" additive="sum"
         values="0 0;0 0;0 -620;0 -620" keyTimes="0;0.06;0.9;1" dur="35.699999999999996s" repeatCount="indefinite"/>
       <text x="0" y="20" fill="#58a6ff" xml:space="preserve">» agent: picked workflow 'ship-hotfix' — Ship a hotfix to production</text>
-      <text x="0" y="40" fill="#58a6ff" xml:space="preserve">» plan: 9 steps · goal: Get a verified, minimal fix into production safely — with staging gate...</text>
+      <text x="0" y="40" fill="#58a6ff" xml:space="preserve">» plan: 10 steps · goal: Get a verified, minimal fix into production safely — with staging gate...</text>
       <text x="0" y="60" fill="#58a6ff" xml:space="preserve">» started session 0ddff8c6…</text>
       <text x="0" y="80" fill="#f0f6fc" xml:space="preserve">
 ── step: Triage the incident  (triage)</text>

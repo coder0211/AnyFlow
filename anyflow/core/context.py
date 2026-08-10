@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .models import StepResult
+from .models import JsonValue, StepResult
 
 
 @dataclass(slots=True)
@@ -18,13 +18,14 @@ class FlowContext:
 
     `history` maps step_id -> the result the agent reported for it.
     `variables` is a free-form scratchpad a flow can use to pass data between
-    steps (e.g. a file path chosen in step 1 and reused in step 3).
+    steps (e.g. a file path chosen in step 1 and reused in step 3). Values are
+    JSON-serializable — the same structured type as `StepResult.artifacts`.
     """
 
     flow_id: str
     session_id: str
     history: dict[str, StepResult] = field(default_factory=dict)
-    variables: dict[str, str] = field(default_factory=dict)
+    variables: dict[str, JsonValue] = field(default_factory=dict)
 
     def result_of(self, step_id: str) -> StepResult | None:
         return self.history.get(step_id)

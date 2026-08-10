@@ -14,7 +14,14 @@ from typing import TYPE_CHECKING
 
 from .context import FlowContext
 from .flow import Flow
-from .models import FlowProgress, SessionStatus, SessionSummary, StepResult, StepStatus
+from .models import (
+    FlowProgress,
+    JsonValue,
+    SessionStatus,
+    SessionSummary,
+    StepResult,
+    StepStatus,
+)
 from .registry import FlowRegistry
 
 if TYPE_CHECKING:
@@ -30,7 +37,7 @@ class Session:
     current_step_id: str | None
     status: SessionStatus = SessionStatus.RUNNING
     history: dict[str, StepResult] = field(default_factory=dict)
-    variables: dict[str, str] = field(default_factory=dict)
+    variables: dict[str, JsonValue] = field(default_factory=dict)
     #: Ordered trail of every step the session has entered, repeats included, so
     #: a gate that routes back shows up as a real loop (e.g. patch, ..., patch).
     path: list[str] = field(default_factory=list)

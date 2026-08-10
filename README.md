@@ -81,9 +81,10 @@ Two layers, kept strictly separate:
     goes fetch (public REST API) → build (one self-contained HTML page) → preview.
     A bad or private link stops at the `fetch` gate. See [Try it](#try-it-in-30-seconds).
   - `ship-hotfix` — the flagship: a real **multi-tool release runbook** (triage →
-    reproduce → patch → test → staging → verify → prod → monitor) with two gates
-    — a failed staging check routes back to `patch`, a prod regression routes to
-    `rollback`.
+    reproduce → patch → test → staging → verify → prod → monitor) with gates that
+    have teeth — a failing staging check routes back to `patch` (and after too
+    many tries, hands off to `escalate`), a prod regression routes to `rollback`,
+    and `test`/`deploy_prod` are gated on structured artifacts, not prose.
   - `fix-bug` — a smaller **branching** flow (reproduce → locate → fix → verify)
     where a failed `verify` step loops back to `locate`.
   - `refactor-python` — a simple **linear** flow (analyze → plan → apply).
@@ -97,6 +98,7 @@ class Step(ABC):
     id: str
     title: str
     max_attempts: int | None = None                                # loop guard; None = unlimited
+    on_exhausted: str | None = None                                # step to route to when the guard trips
     def guide(self, context: FlowContext) -> StepGuidance: ...      # required
     def validate(self, result, context) -> Validation: ...          # default: ok
     def route(self, result, context) -> str | None: ...             # default: linear
@@ -108,7 +110,9 @@ class Flow(ABC):
 
 `guide` receives a `FlowContext` (prior step results + shared variables), so
 guidance can adapt to what happened earlier. `route` lets a flow branch instead
-of running strictly linearly.
+of running strictly linearly. `validate` is where a gate gets **teeth**: report
+structured artifacts (JSON — numbers, lists, nested objects) and have `validate`
+assert on them (e.g. `results.failed == 0`) instead of trusting a free-text claim.
 
 ### MCP tools
 
@@ -135,8 +139,14 @@ always knows where it is without a second call:
   how many times each step has been entered.
 - **Gates can't loop forever** — a `Step` may set `max_attempts`. When a branch
   would re-enter a step past its ceiling (e.g. `patch` keeps failing staging
-  verification), the engine refuses to advance and tells the agent to escalate
-  instead of ping-ponging a gate indefinitely.
+  verification), the engine refuses to advance. Set `on_exhausted` to a terminal
+  step (e.g. `escalate`) to hand off to a human gracefully instead of raising —
+  `ship-hotfix` does exactly this rather than ping-ponging a gate indefinitely.
+- **Gates with teeth** — `complete_step` accepts **structured artifacts** (JSON:
+  numbers, lists, nested objects), and a step's `validate` can assert on them. In
+  `ship-hotfix`, `test` is gated on `results={"passed":int,"failed":int}` (any
+  failure is rejected) and `deploy_prod` on a captured `rollback_command` — facts
+  an agent can't wave away with a vague summary.
 - **Resume later** — with a persistent store, `list_sessions()` finds a stranded
   `session_id` so an interrupted run can be picked back up mid-flow.
 
