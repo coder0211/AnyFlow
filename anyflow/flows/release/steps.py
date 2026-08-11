@@ -123,6 +123,9 @@ class TestStep(Step):
     id = "test"
     title = "Test and add a regression guard"
     description = "Run the suite and add a test that fails without the patch."
+    # Engine enforces the nested shape (results is an object of two ints); the
+    # `validate` below is then left with pure semantics.
+    artifact_schema = {"results": {"passed": int, "failed": int}}
 
     def guide(self, context: FlowContext) -> StepGuidance:
         return StepGuidance(
@@ -150,26 +153,13 @@ class TestStep(Step):
         )
 
     def validate(self, result: StepResult, context: FlowContext) -> Validation:
-        # Teeth via structured artifacts: assert on the actual counts, which a
-        # vague "tests pass" summary can't fake and a string gate can't check.
-        results = result.artifacts.get("results")
-        if not isinstance(results, dict):
-            return Validation.failed(
-                'Report a `results` artifact: {"passed": <int>, "failed": <int>}.'
-            )
-        passed, failed = results.get("passed"), results.get("failed")
-        if not isinstance(passed, int) or not isinstance(failed, int):
-            return Validation.failed(
-                "results.passed and results.failed must be integers."
-            )
-        if failed > 0:
-            return Validation.failed(
-                f"{failed} test(s) still failing — do not proceed."
-            )
-        if passed <= 0:
-            return Validation.failed(
-                "No tests ran — a hotfix needs its regression test to run."
-            )
+        # Shape (results: {passed:int, failed:int}) is guaranteed by the schema —
+        # here we only assert the semantics a schema can't express.
+        results = result.artifacts["results"]
+        if results["failed"] > 0:
+            return Validation.failed(f"{results['failed']} test(s) still failing — do not proceed.")
+        if results["passed"] <= 0:
+            return Validation.failed("No tests ran — a hotfix needs its regression test to run.")
         return Validation.passed()
 
 
@@ -229,6 +219,9 @@ class DeployProdStep(Step):
     id = "deploy_prod"
     title = "Deploy to production"
     description = "Ship to production only after staging is verified green."
+    # Engine enforces that both are present and are strings (an int deploy id is
+    # rejected here, before `validate` runs).
+    artifact_schema = {"prod_deploy_id": str, "rollback_command": str}
 
     def guide(self, context: FlowContext) -> StepGuidance:
         return StepGuidance(
@@ -260,6 +253,8 @@ class DeployProdStep(Step):
         # Teeth: a prod deploy is irreversible-ish and safety hinges on the
         # rollback command existing *before* rollout — so gate on structured
         # artifacts the agent must actually produce, not a free-text claim.
+        # (Presence + string type are guaranteed by `artifact_schema`; here we
+        # add non-empty, then an out-of-band check when a verifier is wired.)
         missing = [
             field
             for field in ("prod_deploy_id", "rollback_command")
@@ -272,6 +267,12 @@ class DeployProdStep(Step):
                 + ". A summary saying 'rollback is ready' is not enough — capture "
                 "the command verbatim so it's usable the instant prod regresses."
             )
+        # Independent verification: if an operator wired a Verifier, don't take the
+        # agent's word that the deploy is live — check it. With no verifier this
+        # skips (returns ok) so the default guide-and-report flow is unchanged.
+        live = context.verify("prod_deploy_live", deploy_id=result.artifacts["prod_deploy_id"])
+        if not live.ok:
+            return Validation.failed(f"prod deploy not confirmed live: {live.detail}")
         return Validation.passed()
 
 

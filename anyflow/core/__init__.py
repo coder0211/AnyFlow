@@ -22,8 +22,10 @@ from .registry import FlowRegistry
 from .session import Session, SessionManager
 from .step import Step
 from .store import SessionStore
+from .verify import Check, Verifier
 
 __all__ = [
+    "Check",
     "Flow",
     "FlowContext",
     "FlowPlan",
@@ -41,4 +43,5 @@ __all__ = [
     "StepStatus",
     "StepSummary",
     "Validation",
+    "Verifier",
 ]

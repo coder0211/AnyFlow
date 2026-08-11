@@ -23,6 +23,7 @@ from .models import (
     StepStatus,
 )
 from .registry import FlowRegistry
+from .verify import Verifier
 
 if TYPE_CHECKING:
     from .store import SessionStore
@@ -44,24 +45,34 @@ class Session:
     #: How many times each step has been entered. Feeds the per-step loop guard.
     attempts: dict[str, int] = field(default_factory=dict)
 
-    def context(self) -> FlowContext:
+    def context(self, verifier: Verifier | None = None) -> FlowContext:
         return FlowContext(
             flow_id=self.flow_id,
             session_id=self.id,
             history=self.history,
             variables=self.variables,
+            verifier=verifier,
         )
 
 
 class SessionManager:
     """Creates sessions and advances them through a flow's steps.
 
-    Storage is injected: pass any `SessionStore` (see `anyflow.stores`).
+    Storage is injected: pass any `SessionStore` (see `anyflow.stores`). An
+    optional `Verifier` is threaded into each step's validation context so a gate
+    can confirm claims out of band (see `anyflow.core.verify`); leave it None to
+    keep the pure guide-and-report behaviour.
     """
 
-    def __init__(self, registry: FlowRegistry, store: SessionStore) -> None:
+    def __init__(
+        self,
+        registry: FlowRegistry,
+        store: SessionStore,
+        verifier: Verifier | None = None,
+    ) -> None:
         self._registry = registry
         self._store = store
+        self._verifier = verifier
 
     def start(self, flow_id: str) -> tuple[Session, Flow]:
         flow = self._registry.get(flow_id)
@@ -101,7 +112,11 @@ class SessionManager:
             )
 
         step = flow.get_step(expected)
-        context = session.context()
+        context = session.context(self._verifier)
+        # Declarative artifact contract first, then the step's own semantics.
+        schema = step.validate_schema(result)
+        if not schema.ok:
+            raise ValueError("; ".join(schema.issues) or "artifact schema check failed")
         validation = step.validate(result, context)
         if not validation.ok:
             raise ValueError("; ".join(validation.issues) or "step validation failed")

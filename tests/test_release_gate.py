@@ -64,15 +64,23 @@ def _test_result(results: object) -> StepResult:
     )
 
 
-def test_missing_results_artifact_is_rejected() -> None:
-    v = TestStep().validate(StepResult(step_id="test", status=StepStatus.COMPLETED), _ctx())
+def test_missing_results_artifact_is_rejected_by_schema() -> None:
+    v = TestStep().validate_schema(StepResult(step_id="test", status=StepStatus.COMPLETED))
     assert not v.ok
     assert any("results" in i for i in v.issues)
 
 
-def test_non_integer_counts_are_rejected() -> None:
-    v = TestStep().validate(_test_result({"passed": "lots", "failed": 0}), _ctx())
+def test_non_integer_counts_are_rejected_by_schema() -> None:
+    # The nested schema {"results": {"passed": int, "failed": int}} catches this.
+    v = TestStep().validate_schema(_test_result({"passed": "lots", "failed": 0}))
     assert not v.ok
+    assert any("results.passed must be int" in i for i in v.issues)
+
+
+def test_missing_nested_count_is_rejected_by_schema() -> None:
+    v = TestStep().validate_schema(_test_result({"passed": 3}))
+    assert not v.ok
+    assert any("results.failed is required" in i for i in v.issues)
 
 
 def test_any_failing_test_is_rejected() -> None:

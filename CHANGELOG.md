@@ -8,6 +8,25 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Sub-flow composition**: a `Flow`'s `steps` may now list other `Flow` classes,
+  which are flattened in place — flows reuse flows (e.g. `onboarding = [provision,
+  training, compliance]`). Ids must stay unique across the composition, internal
+  branching still routes, and a sub-flow's `Flow.END` means "finish this sub-flow"
+  — the composite continues at the step after it (or ends, if it is last).
+- **Declarative artifact schemas**: `Step.artifact_schema` maps a required
+  artifact key to a spec — a JSON type, a nested object (`{"passed": int,
+  "failed": int}`), or a typed list (`[str]`), nesting to any depth. The engine
+  checks presence and shape before `validate` runs, with path-pointed errors
+  (`results.failed must be int`), letting `validate` focus on semantics.
+  `ship-hotfix`'s `test` and `deploy_prod` steps use it.
+- **Independent verification (`Verifier`)**: the core defines a `Verifier`
+  interface (and does no I/O), threaded into validation via `context.verify(...)`
+  and injected through `SessionManager(..., verifier=…)`. Concrete verifiers live
+  outside core — `anyflow.verify.FunctionVerifier` plus ready-made stdlib checks
+  in `anyflow.verify.checks` (`url_returns_2xx`, `command_succeeds`) — so a gate
+  can confirm a claim against reality (e.g. that a prod deploy is live) instead of
+  trusting the agent; with no verifier wired, verification is skipped.
+
 - **Structured (JSON) artifacts and variables**: both `StepResult.artifacts` and
   the session's `variables` scratchpad now hold any JSON type — numbers, bools,
   lists, nested objects — not just strings, so a step can hand off structured data

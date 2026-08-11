@@ -99,13 +99,14 @@ class Step(ABC):
     title: str
     max_attempts: int | None = None                                # loop guard; None = unlimited
     on_exhausted: str | None = None                                # step to route to when the guard trips
+    artifact_schema: dict[str, ...] | None = None                  # required artifacts; nestable JSON shape
     def guide(self, context: FlowContext) -> StepGuidance: ...      # required
     def validate(self, result, context) -> Validation: ...          # default: ok
     def route(self, result, context) -> str | None: ...             # default: linear
 
 class Flow(ABC):
     id: str; name: str; goal: str
-    steps: list[type[Step]]                                         # execution order
+    steps: list[type[Step] | type[Flow]]                           # steps, or sub-flows to compose
 ```
 
 `guide` receives a `FlowContext` (prior step results + shared variables), so
@@ -149,6 +150,26 @@ always knows where it is without a second call:
   an agent can't wave away with a vague summary.
 - **Resume later** — with a persistent store, `list_sessions()` finds a stranded
   `session_id` so an interrupted run can be picked back up mid-flow.
+
+Three more seams let you scale flows up without giving up the pure core:
+
+- **Declarative artifact contracts** — a `Step` can set `artifact_schema`; the
+  engine checks presence and shape before `validate` runs, so steps assert
+  semantics, not shape. Specs nest: a JSON type (`str`), a nested object
+  (`{"passed": int, "failed": int}`), or a typed list (`[str]`), composed to any
+  depth — errors point at the offending path (`results.failed must be int`).
+- **Compose flows from flows** — a `Flow`'s `steps` may list other `Flow`
+  classes; each is flattened in place, so an `onboarding` flow can reuse a
+  `provision` and a `compliance` flow. Ids stay unique across the composition,
+  internal branching still routes, and a sub-flow's `Flow.END` means "finish this
+  sub-flow" — the composite continues at the step after it (or ends, if last).
+- **Independent verification (opt-in)** — the core defines a `Verifier` interface
+  but does no I/O itself. Inject a concrete one (`anyflow.verify.FunctionVerifier`
+  with ready-made checks from `anyflow.verify.checks`, or your own) into
+  `SessionManager`, and a step's `validate` can call
+  `context.verify("prod_deploy_live", …)` to confirm a claim against reality
+  instead of trusting the agent. With no verifier wired, verification is skipped
+  and the flow behaves exactly as before — the engine never executes anything.
 
 ## Quick start
 
