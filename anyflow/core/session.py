@@ -159,17 +159,18 @@ class SessionManager:
         """Build a live map of where `session` sits in its flow."""
         flow = self.flow_of(session)
         order = flow.step_ids()
-        completed = [
-            sid for sid in order
-            if (r := session.history.get(sid)) and r.status is StepStatus.COMPLETED
-        ]
-        remaining = [
-            sid for sid in order
-            if sid != session.current_step_id and sid not in session.history
-        ]
         current = session.current_step_id
-        index = order.index(current) + 1 if current in order else 0
+        # One pass over the flow order splits done vs. not-yet-reached.
+        completed: list[str] = []
+        remaining: list[str] = []
+        for sid in order:
+            result = session.history.get(sid)
+            if result is not None and result.status is StepStatus.COMPLETED:
+                completed.append(sid)
+            elif sid != current and sid not in session.history:
+                remaining.append(sid)
         total = len(order)
+        index = flow.index_of(current) + 1 if current is not None else 0
         return FlowProgress(
             flow_id=session.flow_id,
             session_id=session.id,

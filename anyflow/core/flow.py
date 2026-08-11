@@ -71,6 +71,15 @@ class Flow(ABC):
             if step.id in self._by_id:
                 raise TypeError(f"duplicate step id {step.id!r} in flow {self.id!r}")
             self._by_id[step.id] = step
+        # Precompute the immutable ordering lookups the hot path needs, so
+        # advancing a step is O(1) dict access instead of rebuilding a list and
+        # scanning it on every `complete_step`.
+        self._order: list[str] = [s.id for s in self._steps]
+        self._index: dict[str, int] = {sid: i for i, sid in enumerate(self._order)}
+        self._next_linear: dict[str, str | None] = {
+            sid: (self._order[i + 1] if i + 1 < len(self._order) else None)
+            for i, sid in enumerate(self._order)
+        }
 
     def _flatten(self, entries: list[type[Step] | type[Flow]], escape: str | None) -> None:
         """Append `entries`' steps to `self._steps`, recording END targets.
@@ -122,7 +131,11 @@ class Flow(ABC):
 
     def step_ids(self) -> list[str]:
         """Step ids in declared (default linear) order."""
-        return [s.id for s in self._steps]
+        return list(self._order)
+
+    def index_of(self, step_id: str) -> int:
+        """0-based position of `step_id` in declared order (raises if unknown)."""
+        return self._index[step_id]
 
     def get_step(self, step_id: str) -> Step:
         try:
@@ -150,7 +163,5 @@ class Flow(ABC):
             # Validate the target exists so branching typos fail fast.
             self.get_step(routed)
             return routed
-        # Default: the next step in declared order.
-        order = [s.id for s in self._steps]
-        idx = order.index(step_id)
-        return order[idx + 1] if idx + 1 < len(order) else None
+        # Default: the next step in declared order (precomputed successor).
+        return self._next_linear.get(step_id)
